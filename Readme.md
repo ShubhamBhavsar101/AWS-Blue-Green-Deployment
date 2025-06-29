@@ -1,3 +1,41 @@
+```mermaid
+graph LR
+    subgraph "Internet"
+        User[<fa:fa-user> Internet User]
+    end
+
+    subgraph "AWS Cloud"
+        ALB[<fa:fa-server> Application Load Balancer]
+        
+        subgraph "Blue Environment"
+            TG_Blue(Blue Target Group) --> EC2_Blue[<fa:fa-desktop> Blue EC2]
+        end
+
+        subgraph "Green Environment"
+            TG_Green(Green Target Group) --> EC2_Green[<fa:fa-desktop> Green EC2]
+        end
+        
+        User --> ALB
+        ALB -->|Live Traffic| TG_Blue
+        ALB -->|Inactive| TG_Green
+    end
+```
+
+```mermaid
+graph TD
+    A[Developer 🛠️] --> B{Git Push to 'main' branch}
+    B --> C(Jenkins Pipeline Triggered)
+
+    subgraph "Jenkins Control Plane"
+        C --> D[1. Checkout Code]
+        D --> E[2. Identify Inactive Env]
+        E --> F[3. Run Ansible Playbook\non Inactive Server]
+        F --> G{4. Manual Approval Gate}
+        G --> H[5. Run Ansible 'traffic_switch'\nvia AWS CLI]
+        H --> I[6. Deployment Complete]
+    end
+
+```
 
 # AWS Blue/Green Deployment with Jenkins and Ansible
 
