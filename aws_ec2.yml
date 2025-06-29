@@ -1,0 +1,10 @@
+# aws_ec2.yml
+plugin: amazon.aws.aws_ec2
+regions:
+  - ap-south-1  # <-- Change this to your AWS region if different
+
+# This creates host groups from tags.
+# For a tag "Deployment:Green", it creates a group "tag_Deployment_Green".
+keyed_groups:
+  - key: tags
+    prefix: tag
