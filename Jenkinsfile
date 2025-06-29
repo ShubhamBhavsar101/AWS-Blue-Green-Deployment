@@ -8,47 +8,102 @@ pipeline {
     environment {
         AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
-        AWS_DEFAULT_REGION    = 'ap-south-1' // Change if your region is different
+        AWS_DEFAULT_REGION    = 'ap-south-1'
     }
     stages {
-        stage('1. Identify Inactive Environment') {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/ShubhamBhavsar101/AWS-Blue-Green-Deployment'
+            }
+        }
+        stage('Live Traffic Check') {
             steps {
                 script {
                     def current_live_tg = sh(script: "aws elbv2 describe-listeners --listener-arns ${LISTENER_ARN} | jq -r '.Listeners[0].DefaultActions[0].TargetGroupArn'", returnStdout: true).trim()
+                    def live_environment = (current_live_tg == BLUE_TG_ARN) ? "BLUE" : "GREEN"
+                    echo "The live traffic is in ${live_environment}"
+                    }
+            }
+        }
+        stage('Confirmation to Deploy Code') {
+            steps {
+                script {
+                    def current_live_tg = sh(script: "aws elbv2 describe-listeners --listener-arns ${LISTENER_ARN} | jq -r '.Listeners[0].DefaultActions[0].TargetGroupArn'", returnStdout: true).trim()
+
                     if (current_live_tg == BLUE_TG_ARN) {
                         env.DEPLOY_TO_ENV = 'green'
-                        env.DEPLOY_TO_TG_NAME = 'green-tg'
+                        env.DEPLOY_TO_TG_ARN = GREEN_TG_ARN
+                        env.SWITCH_TO_ARN = GREEN_TG_ARN
                     } else {
                         env.DEPLOY_TO_ENV = 'blue'
-                        env.DEPLOY_TO_TG_NAME = 'blue-tg'
+                        env.DEPLOY_TO_TG_ARN = BLUE_TG_ARN
+                        env.SWITCH_TO_ARN = BLUE_TG_ARN
                     }
-                    echo "Live traffic is NOT on ${env.DEPLOY_TO_ENV.toUpperCase()}. We will configure the ${env.DEPLOY_TO_ENV.toUpperCase()} server."
+                    
+                    input "The current live environment is NOT '${env.DEPLOY_TO_ENV.toUpperCase()}'. This pipeline will now configure and deploy to the '${env.DEPLOY_TO_ENV.toUpperCase()}' environment. Do you want to continue?"
                 }
             }
         }
-        stage('2. Configure Inactive Server (Automated)') {
+
+        stage('Configure Inactive Server (Automated)') {
             steps {
                 script {
                     echo "Running Ansible on the existing '${env.DEPLOY_TO_ENV}-server'..."
+                    // We MUST provide the inventory here so Ansible can find the remote EC2 hosts.
                     if (env.DEPLOY_TO_ENV == 'blue') {
-                        ansiblePlaybook(playbook: 'configure_blue.yml')
+                        ansiblePlaybook(
+                            playbook: 'configure_blue.yml',
+                            inventory: 'aws_ec2.yml'
+                        )
                     } else {
-                        ansiblePlaybook(playbook: 'configure_green.yml')
+                        ansiblePlaybook(
+                            playbook: 'configure_green.yml',
+                            inventory: 'aws_ec2.yml'
+                        )
                     }
                 }
             }
         }
-        stage('3. Verify Inactive Server (Manual)') {
+
+        stage('Manual Approval to Go Live') {
             steps {
-                input "ACTION: The '${env.DEPLOY_TO_ENV}-server' is configured. In AWS, go to Target Groups -> '${env.DEPLOY_TO_TG_NAME}' and confirm the server's health status is 'healthy'. Click 'Proceed' when ready."
+                script {
+                    echo "Waiting 10 seconds for health checks to stabilize..."
+                    sleep(10)
+                    
+                    def health = sh(
+                        script: "aws elbv2 describe-target-health --target-group-arn ${env.DEPLOY_TO_TG_ARN} | jq -r '.TargetHealthDescriptions[0].TargetHealth.State'",
+                        returnStdout: true
+                    ).trim()
+                    
+                    if (health != 'healthy') {
+                        error("Deployment failed: The new environment '${env.DEPLOY_TO_ENV}' is not healthy. Current status is '${health}'. Aborting.")
+                    }
+                    
+                    echo "SUCCESS: The new '${env.DEPLOY_TO_ENV}' environment is configured and HEALTHY."
+                    input "Ready to switch live traffic to the '${env.DEPLOY_TO_ENV}' environment?"
+                }
             }
         }
-        stage('4. Switch Live Traffic (Manual)') {
+
+        stage('Switch Live Traffic (Automated)') {
             steps {
-                input "FINAL ACTION: In AWS, go to Load Balancers -> your ALB -> Listeners. Edit the listener to forward traffic to '${env.DEPLOY_TO_TG_NAME}'. Test the ALB's DNS name in a browser. Click 'Proceed' when done."
+                script {
+                    echo "Switching live traffic automatically to ${env.DEPLOY_TO_ENV.toUpperCase()}..."
+                    // The inventory parameter is NOT needed here because the playbook's
+                    // 'hosts' is set to 'localhost', which Ansible always knows.
+                    ansiblePlaybook(
+                        playbook: 'traffic_switch.yml',
+                        extraVars: [
+                            listener_arn: LISTENER_ARN,
+                            new_target_group_arn: env.SWITCH_TO_ARN
+                        ]
+                    )
+                }
             }
         }
-        stage('5. Deployment Complete') {
+        
+        stage('Deployment Complete') {
             steps {
                 echo "Success! The ${env.DEPLOY_TO_ENV.toUpperCase()} environment is now LIVE."
             }
