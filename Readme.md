@@ -17,8 +17,7 @@ The architecture uses two persistent environments, "Blue" and "Green," each cons
 ---
 
 ## Architecture Diagram
-
-![image](https://github.com/user-attachments/assets/058b9f35-38a4-44d6-830a-31014071dfe7)
+![image](https://github.com/user-attachments/assets/ce316f00-1839-4a9b-b797-56a6e27a9dd9)
 
 ---
 
