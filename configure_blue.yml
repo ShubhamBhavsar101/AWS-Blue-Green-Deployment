@@ -8,14 +8,3 @@
       copy: { src: files/index_blue.html, dest: /var/www/html/index.html }
     - name: Start httpd
       service: { name: httpd, state: started, enabled: yes }
-
-- name: Configure the GREEN Server
-  hosts: tag_Deployment_Green
-  become: yes
-  tasks:
-    - name: Install httpd
-      dnf: { name: httpd, state: present }
-    - name: Copy index file
-      copy: { src: files/index_green.html, dest: /var/www/html/index.html }
-    - name: Start httpd
-      service: { name: httpd, state: started, enabled: yes }
