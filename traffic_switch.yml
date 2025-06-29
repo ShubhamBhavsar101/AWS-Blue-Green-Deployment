@@ -1,0 +1,24 @@
+      
+# traffic_switch.yml
+
+- name: Switch ALB Live Traffic
+  # This playbook runs on the Jenkins server itself, not on a remote EC2 instance.
+  hosts: localhost
+  connection: local
+
+  # We don't need to gather facts about the Jenkins server, so this is set to 'no'.
+  gather_facts: no
+
+  tasks:
+    - name: Modify ALB listener to point to the new Target Group
+      # This task executes a standard AWS CLI command. The variables are
+      # passed in from the Jenkinsfile using the 'extraVars' parameter.
+      command: >
+        aws elbv2 modify-listener
+        --listener-arn "{{ listener_arn }}"
+        --default-actions Type=forward,TargetGroupArn="{{ new_target_group_arn }}"
+
+      # The 'listener_arn' and 'new_target_group_arn' variables are provided
+      # by the 'Switch Live Traffic (Automated)' stage in the Jenkinsfile.
+
+    
