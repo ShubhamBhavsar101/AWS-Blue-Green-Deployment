@@ -1,0 +1,13 @@
+      
+# group_vars/all.yml
+
+# This file defines variables that apply to ALL hosts managed by Ansible.
+
+ansible_user: ec2-user
+
+ansible_ssh_private_key_file: /var/lib/jenkins/VenomPC.pem
+
+# Add extra arguments to the SSH command to prevent host key checking prompts.
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+    
