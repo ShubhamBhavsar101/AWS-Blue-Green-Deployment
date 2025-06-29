@@ -14,13 +14,13 @@ The architecture uses two persistent environments, "Blue" and "Green," each cons
 - **Web Server:** Apache HTTPD
 - **Key AWS Services:** EC2, Application Load Balancer (ALB), Target Groups, Security Groups
 
-──────────────
+---
 
 ## Architecture Diagram
 
 ![image](https://github.com/user-attachments/assets/058b9f35-38a4-44d6-830a-31014071dfe7)
 
-──────────────
+---
 
 ## Project Visualization
 
@@ -59,7 +59,7 @@ A look at the configured AWS resources that support the deployment.
 _The "dummy" health check rules are essential for ensuring the inactive environment is always being health-checked._  
 ![Listener Rules](https://github.com/user-attachments/assets/1c1ac1ae-86af-4f4b-afb0-f0f33775b5e3)
 
-──────────────
+---
 
 ## Features
 
@@ -71,7 +71,7 @@ _The "dummy" health check rules are essential for ensuring the inactive environm
 - **Automated Health Checks:** Before the final approval, the pipeline automatically verifies that the newly deployed environment is healthy.
 - **Automated Traffic Switch:** After approval, the pipeline uses the AWS CLI to atomically switch the ALB listener rule.
 
-──────────────
+---
 
 ## Prerequisites
 
@@ -90,7 +90,7 @@ Before you can run this project, you need the following:
     - Ansible tool configured in "Manage Jenkins" -> "Tools".
     - AWS credentials (`aws-access-key`, `aws-secret-key`) stored in the Jenkins Credentials Manager.
 
-──────────────
+---
 
 ## Setup and Implementation
 
@@ -119,7 +119,7 @@ This project requires a one-time manual setup of the AWS infrastructure.
     - Update `group_vars/all.yml` with the correct path to your SSH key.
     - Update the top of the `Jenkinsfile` with the correct ARNs for your ALB listener and target groups.
 
-──────────────
+---
 
 ## How to Use
 
@@ -131,7 +131,7 @@ This project requires a one-time manual setup of the AWS infrastructure.
     - To confirm the start of the deployment.
     - For final approval before switching traffic to the newly verified healthy environment.
 
-──────────────
+---
 
 ## Key Files Overview
 
